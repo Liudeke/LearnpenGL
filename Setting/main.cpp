@@ -1,7 +1,12 @@
+#include <fstream>
+#include <sstream>
 #include <iostream>
 #define GLEW_STATIC
 #include<GL/glew.h>
 #include<GLFW/glfw3.h>
+#include "Shader.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 //#include <GLTools.h>
 //#include <GLShaderManager.h>    // Shader Manager Class
 //#include <GLBatch.h>
@@ -20,18 +25,7 @@
 ////#pragma comment(lib,"glew32s.lib")
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
-const char *vertexShaderSource = "#version 330 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-"}\0";
-const char *fragmentShaderSource = "#version 330 core\n"
-"out vec4 FragColor;\n"
-"void main()\n"
-"{\n"
-"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-"}\n\0";
+
 // settings
 const unsigned int SCR_WIDTH = 600;
 const unsigned int SCR_HEIGHT = 800;
@@ -49,35 +43,31 @@ int main() {
 	}
 	glfwMakeContextCurrent(window);
 	glewExperimental = true;
-	if (glewInit()!= GLEW_OK) {
+	if (glewInit() != GLEW_OK) {
 		//printf("failed");
 		glfwTerminate();
 		return -1;
 	}
-	GLfloat vVerts[18] = {
-	   -0.5f, 0.0f, 0.0f,
-		0.5f, 0.0f, 0.0f,
-		0.0f, 0.5f, 0.0f,
+	Shader shader("shader.vs", "shader.fs");
 
-		//0.0f, 0.5f, 0.0f,
-		0.5f, 0.5f, 0.0f,
-		//0.5f, 0.0f, 0.0f,
+	GLfloat vVerts[] = {
+	 0.5f, -0.5f, 0.0f,  1.0f, 0.5f, 0.0f,  1.0f, 1.0f, // top right // 右下
+	-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f, // bottom right// 左下
+	-0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f, // bottom left// 顶部
+	 0.5f,  0.5f, 0.0f,  0.1f, 0.5f, 1.0f,  0.0f, 1.0f  // top left  // 顶部
 	};
 	unsigned int indices[]{
-		0,1,2,
-		2,1,3
+		/*0,3,6,
+		7,0,10*/
+		 0, 1, 3, // first triangle
+		1, 2, 3  // second triangle
 	};
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	/*glViewport(0, 0, 800, 600);
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT);*/
+
 	unsigned int VAO;
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
 
-	/*glGenVertexArrays(1, &EBO);
-	glBindVertexArray(EBO);*/
 	unsigned int VBO;
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -88,43 +78,49 @@ int main() {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-	unsigned int verterShader;
-	verterShader= glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(verterShader, 1, &vertexShaderSource, NULL);
-	glCompileShader(verterShader);
-
-	unsigned int fragmentShader;
-	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-	glCompileShader(fragmentShader);
-
-	unsigned int shaderProgram;
-	shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, verterShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	glLinkProgram(shaderProgram);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
-	//顶点shader
-	/*int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-	glCompileShader(vertexShader);
-	int success;
-	char infolog[512];
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);*/
 
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	unsigned int texture1, texture2;
+	glGenTextures(1, &texture1);
+	glBindTexture(GL_TEXTURE_2D, texture1);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	int width, height, nrChannels;
+	stbi_set_flip_vertically_on_load(true);
+
+	unsigned char *data = stbi_load("container.jpg", &width, &height, &nrChannels, 0);
+	if (data) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+	stbi_image_free(data);
 	while (!glfwWindowShouldClose(window))
 	{
 		// input
 		// -----
 		processInput(window);
-		glClearColor(0, 1, 0, 1);
+		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		glBindVertexArray(VAO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		glUseProgram(shaderProgram);
+		glBindTexture(GL_TEXTURE_2D, texture1);
+
+		shader.use();
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		//glDrawArrays(GL_TRIANGLES, 0, 6);
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -132,14 +128,13 @@ int main() {
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-	//GLint glGetUniformLocation();
-	/*GL_LINES*/
+
 	glfwTerminate();
 	return 0;
 }
 void processInput(GLFWwindow *window)
 {
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) ==GLFW_PRESS)//GLFW_PRESS
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)//GLFW_PRESS
 		glfwSetWindowShouldClose(window, true);
 }
 
@@ -150,8 +145,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	// make sure the viewport matches the new window dimensions; note that width and 
 	// height will be significantly larger than specified on retina displays.
 	glViewport(0, 0, width, height);
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT);
+	/*glEnable(GL_CULL_FACE);
+	glCullFace(GL_FRONT);*/
 }
 
 //GLBatch	triangleBatch;
@@ -276,3 +271,5 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 //	return 0;
 //}
 //
+
+
