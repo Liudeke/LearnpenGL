@@ -7,6 +7,11 @@
 #include "Shader.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+using namespace std;
+using namespace glm;
 //#include <GLTools.h>
 //#include <GLShaderManager.h>    // Shader Manager Class
 //#include <GLBatch.h>
@@ -30,6 +35,16 @@ void processInput(GLFWwindow *window);
 const unsigned int SCR_WIDTH = 600;
 const unsigned int SCR_HEIGHT = 800;
 int main() {
+	glm::vec4 vec(1, 0, 0, 1);
+	glm::mat4 trans=glm::mat4(1);
+
+	//trans = glm::translate(trans, glm::vec3(0.5f, 0, 0));
+
+	trans = glm::rotate(trans, glm::radians(90.0f), glm::vec3(0, 0, 1));
+	trans = scale(trans, vec3(0.5f,0.5f,0.5f));
+
+	//vec = trans * vec;
+	std::cout << vec.x << vec.y << vec.z << std::endl;
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -51,17 +66,27 @@ int main() {
 	Shader shader("shader.vs", "shader.fs");
 
 	GLfloat vVerts[] = {
-	 0.5f, -0.5f, 0.0f,  1.0f, 0.5f, 0.0f,  1.0f, 1.0f, // top right // 右下
-	-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f, // bottom right// 左下
-	-0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f, // bottom left// 顶部
-	 0.5f,  0.5f, 0.0f,  0.1f, 0.5f, 1.0f,  0.0f, 1.0f  // top left  // 顶部
+	 0.5f, 0.5f, 0.0f,  1.0f, 0.5f, 0.0f,  1.0f, 1.0f, // top right // 右下
+	0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f, // bottom right// 左下
+	-0.5f,  -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f, // bottom left// 顶部
+	 -0.5f,  0.5f, 0.0f,  0.1f, 0.5f, 1.0f,  0.0f, 1.0f  // top left  // 顶部
 	};
+	//GLfloat vVerts[] = {
+	// 1.0f, 0.5f, 0.0f,  1.0f, 0.5f, 0.0f,  1.0f, 1.0f, // top right // 右下
+	// 1.0f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f, // bottom right// 左下
+	//0.0f,  -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f, // bottom left// 顶部
+	//0.0f,  0.5f, 0.0f,  0.1f, 0.5f, 1.0f,  0.0f, 1.0f  // top left  // 顶部
+	//}; 
 	unsigned int indices[]{
 		/*0,3,6,
 		7,0,10*/
 		 0, 1, 3, // first triangle
 		1, 2, 3  // second triangle
 	};
+#pragma region MyRegion
+
+
+
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	unsigned int VAO;
@@ -108,6 +133,35 @@ int main() {
 		std::cout << "Failed to load texture" << std::endl;
 	}
 	stbi_image_free(data);
+
+
+	glGenTextures(1, &texture2);
+	//glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, texture2);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	//stbi_set_flip_vertically_on_load(true);
+
+	data = stbi_load("awesomeface.png", &width, &height, &nrChannels, 0);
+	if (data) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+	stbi_image_free(data);
+	shader.use();
+	glUniform1i(glGetUniformLocation(shader.ID, "texture1"), 0);
+	shader.setInt("texture2", 1);
+#pragma endregion
+	/*unsigned int tranformLoc = glGetUniformLocation(shader.ID, "transform");
+	glUniformMatrix4fv(tranformLoc, 1, GL_FALSE, value_ptr(trans));*/
+
 	while (!glfwWindowShouldClose(window))
 	{
 		// input
@@ -118,9 +172,18 @@ int main() {
 
 		glBindVertexArray(VAO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture1);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, texture2);
+		glm::mat4 transform = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+		transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+		transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f));
 
 		shader.use();
+		unsigned int transformLoc = glGetUniformLocation(shader.ID, "transform");
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
+
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		//glDrawArrays(GL_TRIANGLES, 0, 6);
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -128,6 +191,9 @@ int main() {
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBO);
+	glDeleteBuffers(1, &EBO);
 
 	glfwTerminate();
 	return 0;
@@ -149,127 +215,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	glCullFace(GL_FRONT);*/
 }
 
-//GLBatch	triangleBatch;
-//GLBatch squareBatch;
-//GLShaderManager	shaderManager;//
-//
-/////////////////////////////////////////////////////////////////////////////////
-//// Window has changed size, or has just been created. In either case, we need
-//// to use the window dimensions to set the viewport and the projection matrix.
-//void ChangeSize(int w, int h)
-//{
-//	glViewport(0, 0, w, h);
-//}
-//GLfloat vVerts[18] = { 
-//	   -0.5f, 0.0f, 0.0f,
-//		0.5f, 0.0f, 0.0f,
-//		0.0f, 0.5f, 0.0f,
-//
-//		0.0f, 0.5f, 0.0f,
-//		0.5f, 0.5f, 0.0f,
-//		0.5f, 0.0f, 0.0f,
-//};
-//
-//
-/////////////////////////////////////////////////////////////////////////////////
-//// This function does any needed initialization on the rendering context. 
-//// This is the first opportunity to do any OpenGL related tasks.
-//void SetupRC()
-//{
-//	// Blue background
-//	glClearColor(0.50f, 1.0f, 1.0f, 1.0f);//设置背景颜色
-//
-//	shaderManager.InitializeStockShaders();//初始化着色器，使其可以编译链接自己的着色器
-//
-//	// Load up a triangle
-//	/* vVerts[] = { -0.5f, 0.0f, 0.0f,
-//		0.5f, 0.0f, 0.0f,
-//		0.0f, 0.5f, 0.0f };
-//*/
-//	triangleBatch.Begin(GL_TRIANGLES, 6);
-//	triangleBatch.CopyVertexData3f(vVerts);
-//	triangleBatch.End();
-//}
-//
-//
-///////////////////////////////////////////////////////////////////////////////
-//// Called to draw scene
-//void RenderScene(void)//开始渲染
-//{
-//	// Clear the window with current clearing color
-//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);//清除屏幕上最后绘制的内容
-//
-//	GLfloat vRed[] = { 1.0f, 1.0f, 0.0f, 1.0f };
-//	shaderManager.UseStockShader(GLT_SHADER_IDENTITY, vRed);
-//	triangleBatch.Draw();//将几何图形 提交到着色器
-//
-//	// Perform the buffer swap to display back buffer
-//	glutSwapBuffers();
-//
-//}
-//
-//void SpecialKeys(int key, int x, int y) {
-//	GLfloat blockSize = 0.02f;
-//	GLfloat stepSize = 0.025f;
-//	GLfloat blockX = vVerts[0];
-//	GLfloat blockY = vVerts[7];
-//	vVerts[0] = 5.0f;
-//	vVerts[7] = 5.0f;
-//	printf("test");
-//	if (key == GLUT_KEY_UP)
-//		blockY += stepSize;
-//	if (key == GLUT_KEY_DOWN)
-//		blockY -= stepSize;
-//	if (key == GLUT_KEY_LEFT)
-//		blockY -= stepSize;
-//	if (key == GLUT_KEY_RIGHT)
-//		blockY += stepSize;
-//	/*if (blockX < -1)blockX = -1;
-//	if (blockX > (1 - blockSize * 2))blockX = (1 - blockSize * 2);
-//
-//	if (blockY < (-1 + blockSize * 2))blockY= -1 + blockSize * 2;
-//	if (blockY > 1 )blockY=1;
-//
-//	vVerts[0] = blockX;
-//	vVerts[1] = blockY-blockSize*2;
-//
-//	vVerts[3] = blockX+blockSize*2;
-//	vVerts[4] = blockY-blockSize*2;
-//
-//	vVerts[6] = blockX+blockSize*2;
-//	vVerts[7] = blockY;
-//
-//	vVerts[9] = blockX;
-//	vVerts[10] = blockY;
-//	squareBatch.CopyVertexData3f(vVerts);*/
-//	triangleBatch.CopyVertexData3f(vVerts);
-//	glutPostRedisplay();
-//}
-/////////////////////////////////////////////////////////////////////////////////
-//// Main entry point for GLUT based programs
-//int main(int argc, char* argv[])
-//{
-//	gltSetWorkingDirectory(argv[0]);
-//
-//	glutInit(&argc, argv);
-//	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH | GLUT_STENCIL);
-//	glutInitWindowSize(600, 800);
-//	glutCreateWindow("Triangle");
-//	glutReshapeFunc(ChangeSize);
-//	glutDisplayFunc(RenderScene);
-//	//glutSpecialFunc(SpecialKeys);
-//	GLenum err = glewInit();
-//	if (GLEW_OK != err) {
-//		fprintf(stderr, "GLEW Error: %s\n", glewGetErrorString(err));
-//		return 1;
-//	}
-//
-//	SetupRC();
-//
-//	glutMainLoop();
-//	system("puase");
-//	return 0;
-//}
-//
+
 
 
