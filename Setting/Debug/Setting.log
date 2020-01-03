@@ -1,2 +1,5 @@
-﻿  main.cpp
+﻿  Shader.cpp
+  main.cpp
+f:\cppprojects\setting\setting\main.cpp(164): warning C4101: “transform”: 未引用的局部变量
+  正在生成代码...
   Setting.vcxproj -> F:\CppProjects\Setting\Debug\Setting.exe

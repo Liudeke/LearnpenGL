@@ -36,12 +36,12 @@ const unsigned int SCR_WIDTH = 600;
 const unsigned int SCR_HEIGHT = 800;
 int main() {
 	glm::vec4 vec(1, 0, 0, 1);
-	glm::mat4 trans=glm::mat4(1);
+	glm::mat4 trans = glm::mat4(1);
 
 	//trans = glm::translate(trans, glm::vec3(0.5f, 0, 0));
 
 	trans = glm::rotate(trans, glm::radians(90.0f), glm::vec3(0, 0, 1));
-	trans = scale(trans, vec3(0.5f,0.5f,0.5f));
+	trans = scale(trans, vec3(0.5f, 0.5f, 0.5f));
 
 	//vec = trans * vec;
 	std::cout << vec.x << vec.y << vec.z << std::endl;
@@ -67,7 +67,7 @@ int main() {
 
 	GLfloat vVerts[] = {
 	 0.5f, 0.5f, 0.0f,  1.0f, 0.5f, 0.0f,  1.0f, 1.0f, // top right // 右下
-	0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f, // bottom right// 左下
+	 0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f, // bottom right// 左下
 	-0.5f,  -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f, // bottom left// 顶部
 	 -0.5f,  0.5f, 0.0f,  0.1f, 0.5f, 1.0f,  0.0f, 1.0f  // top left  // 顶部
 	};
@@ -161,7 +161,13 @@ int main() {
 #pragma endregion
 	/*unsigned int tranformLoc = glGetUniformLocation(shader.ID, "transform");
 	glUniformMatrix4fv(tranformLoc, 1, GL_FALSE, value_ptr(trans));*/
-
+	glm::mat4 transform;
+	glm::mat4 view = mat4(1.0f);
+	view = glm::translate(view, glm::vec3(0.0f, 0.0f,0.0f));
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+	glm::mat4 projection = glm::mat4(1.0f);
+	projection = glm::perspective(glm::radians(45.0f), (float)(SCR_WIDTH / SCR_HEIGHT), 0.1f, 100.0f);
 	while (!glfwWindowShouldClose(window))
 	{
 		// input
@@ -169,22 +175,47 @@ int main() {
 		processInput(window);
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
-
 		glBindVertexArray(VAO);
+
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture1);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, texture2);
-		glm::mat4 transform = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
-		transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f));
 
+
+		//transform = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+
+		//transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f));
+		//transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
 		shader.use();
-		unsigned int transformLoc = glGetUniformLocation(shader.ID, "transform");
-		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
+		/*unsigned int transformLoc = glGetUniformLocation(shader.ID, "transform");
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));*/
+
+
+		unsigned int transformLocmodel = glGetUniformLocation(shader.ID, "model");
+		glUniformMatrix4fv(transformLocmodel, 1, GL_FALSE, glm::value_ptr(model));
+
+		unsigned int transformLocview = glGetUniformLocation(shader.ID, "view");
+		glUniformMatrix4fv(transformLocview, 1, GL_FALSE, &view[0][0]);
+
+		unsigned int transformLocprojection = glGetUniformLocation(shader.ID, "projection");
+		glUniformMatrix4fv(transformLocprojection, 1, GL_FALSE, glm::value_ptr(projection));
+
 
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+		//transform = glm::mat4(1.0f); // reset it to identity matrix
+		//float xValue = cos(glfwGetTime());
+		//float YValue = sin(glfwGetTime());
+
+		//transform = glm::translate(transform, glm::vec3(xValue, YValue, 0.0f));
+		//float scaleAmount = sin(glfwGetTime());
+		//transform = glm::scale(transform, glm::vec3(scaleAmount, scaleAmount, scaleAmount));
+		//glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform)); // this time take the matrix value array's first element as its memory pointer value
+
+
+		//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		//glDrawArrays(GL_TRIANGLES, 0, 6);
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		// -------------------------------------------------------------------------------
