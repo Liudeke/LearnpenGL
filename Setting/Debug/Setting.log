@@ -1,5 +1,7 @@
-﻿  Shader.cpp
-  main.cpp
-f:\cppprojects\setting\setting\main.cpp(164): warning C4101: “transform”: 未引用的局部变量
-  正在生成代码...
+﻿  Test3d.cpp
+f:\cppprojects\setting\setting\test3d.cpp(207): warning C4244: “初始化”: 从“double”转换到“float”，可能丢失数据
+f:\cppprojects\setting\setting\test3d.cpp(229): warning C4244: “初始化”: 从“double”转换到“float”，可能丢失数据
+f:\cppprojects\setting\setting\test3d.cpp(230): warning C4244: “初始化”: 从“double”转换到“float”，可能丢失数据
+f:\cppprojects\setting\setting\test3d.cpp(254): warning C4244: “初始化”: 从“double”转换到“float”，可能丢失数据
+f:\cppprojects\setting\setting\test3d.cpp(271): warning C4554: “|”: 检查运算符优先级是否存在的可能的错误；使用括号阐明优先级
   Setting.vcxproj -> F:\CppProjects\Setting\Debug\Setting.exe
